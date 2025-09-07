@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý học liệu</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f6f9;
+            margin: 0;
+            padding: 20px;
+        }
+
+        h1,
+        h2 {
+            text-align: center;
+            color: #333;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+        }
+
+        input,
+        textarea,
+        select,
+        button {
+            width: 100%;
+            padding: 10px;
+            margin: 6px 0;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+        }
+
+        button {
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+            border: none;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        table,
+        th,
+        td {
+            border: 1px solid #ccc;
+        }
+
+        th,
+        td {
+            padding: 10px;
+            text-align: center;
+        }
+
+        th {
+            background: #007bff;
+            color: white;
+        }
+
+        .delete-btn {
+            background: red;
+            color: white;
+            padding: 5px 10px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .delete-btn:hover {
+            background: darkred;
+        }
+
+        .link {
+            color: blue;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>📚 Hệ thống quản lý học liệu</h1>
+
+    <!-- Đăng nhập / Đăng ký -->
+    <div class="container" id="authContainer">
+        <h2 id="authTitle">Đăng nhập</h2>
+        <form id="authForm">
+            <input type="email" id="username" placeholder="Email" required>
+            <input type="password" id="password" placeholder="Mật khẩu" required>
+            <button type="submit">Đăng nhập</button>
+        </form>
+        <p id="toggleText">Chưa có tài khoản? <span class="link" id="toggleLink">Đăng ký</span></p>
+    </div>
+
+    <!-- Thông tin giáo viên -->
+    <div class="container hidden" id="infoContainer">
+        <h2>Thông tin giáo viên</h2>
+        <form id="infoForm">
+            <input type="text" id="school" placeholder="Địa chỉ trường" required>
+            <input type="text" id="teacher" placeholder="Tên giáo viên" required>
+            <input type="text" id="class" placeholder="Lớp dạy" required>
+            <input type="number" id="year" placeholder="Năm học" required>
+            <button type="submit">Lưu thông tin</button>
+        </form>
+    </div>
+
+    <!-- Quản lý học liệu -->
+    <div class="container hidden" id="studyContainer">
+        <h2>Xin chào, <span id="userLabel"></span> 👋</h2>
+        <button onclick="logout()">Đăng xuất</button>
+
+        <h3>📂 Upload học liệu (Word, Excel, PowerPoint)</h3>
+        <input type="file" id="fileUpload" multiple accept=".doc,.docx,.xls,.xlsx,.ppt,.pptx">
+        <button onclick="saveFiles()">Tải lên</button>
+
+        <div id="fileList"></div>
+    </div>
+
+    <script>
+        const authContainer = document.getElementById("authContainer");
+        const infoContainer = document.getElementById("infoContainer");
+        const studyContainer = document.getElementById("studyContainer");
+        const authForm = document.getElementById("authForm");
+        const infoForm = document.getElementById("infoForm");
+        const userLabel = document.getElementById("userLabel");
+        const fileList = document.getElementById("fileList");
+        const toggleLink = document.getElementById("toggleLink");
+        const authTitle = document.getElementById("authTitle");
+        const toggleText = document.getElementById("toggleText");
+
+        let isLogin = true;
+        let dataFiles = [];
+
+        // Đăng nhập / Đăng ký
+        toggleLink.addEventListener("click", function () {
+            isLogin = !isLogin;
+            if (isLogin) {
+                authTitle.textContent = "Đăng nhập";
+                authForm.querySelector("button").textContent = "Đăng nhập";
+                toggleText.innerHTML = 'Chưa có tài khoản? <span class="link" id="toggleLink">Đăng ký</span>';
+            } else {
+                authTitle.textContent = "Đăng ký";
+                authForm.querySelector("button").textContent = "Đăng ký";
+                toggleText.innerHTML = 'Đã có tài khoản? <span class="link" id="toggleLink">Đăng nhập</span>';
+            }
+        });
+
+        authForm.addEventListener("submit", function (e) {
+            e.preventDefault();
+            const username = document.getElementById("username").value;
+            const password = document.getElementById("password").value;
+            let users = JSON.parse(localStorage.getItem("users")) || {};
+
+            if (isLogin) {
+                if (users[username] && users[username] === password) {
+                    localStorage.setItem("currentUser", username);
+                    showInfo(username);
+                } else {
+                    alert("Sai email hoặc mật khẩu!");
+                }
+            } else {
+                if (users[username]) {
+                    alert("Email đã tồn tại!");
+                } else {
+                    users[username] = password;
+                    localStorage.setItem("users", JSON.stringify(users));
+                    alert("Đăng ký thành công!");
+                    isLogin = true;
+                    authTitle.textContent = "Đăng nhập";
+                    authForm.querySelector("button").textContent = "Đăng nhập";
+                }
+            }
+        });
+
+        // Hiển thị form nhập thông tin
+        function showInfo(username) {
+            authContainer.classList.add("hidden");
+            infoContainer.classList.remove("hidden");
+            studyContainer.classList.add("hidden");
+        }
+
+        // Lưu thông tin giáo viên
+        infoForm.addEventListener("submit", function (e) {
+            e.preventDefault();
+            const school = document.getElementById("school").value;
+            const teacher = document.getElementById("teacher").value;
+            const className = document.getElementById("class").value;
+            const year = document.getElementById("year").value;
+            const user = localStorage.getItem("currentUser");
+
+            let teacherInfo = { school, teacher, className, year };
+            localStorage.setItem("teacherInfo_" + user, JSON.stringify(teacherInfo));
+
+            showStudyApp(user);
+        });
+
+        // Quản lý học liệu
+        function showStudyApp(username) {
+            infoContainer.classList.add("hidden");
+            studyContainer.classList.remove("hidden");
+            userLabel.textContent = username;
+
+            dataFiles = JSON.parse(localStorage.getItem("files_" + username)) || [];
+            renderFiles();
+        }
+
+        function saveFiles() {
+            const files = document.getElementById("fileUpload").files;
+            const user = localStorage.getItem("currentUser");
+            for (let file of files) {
+                dataFiles.push({ name: file.name, date: new Date().toLocaleString() });
+            }
+            localStorage.setItem("files_" + user, JSON.stringify(dataFiles));
+            renderFiles();
+            document.getElementById("fileUpload").value = "";
+        }
+
+        function renderFiles() {
+            fileList.innerHTML = "";
+            if (dataFiles.length === 0) {
+                fileList.innerHTML = "<p>Chưa có học liệu nào.</p>";
+                return;
+            }
+            let table = `
+        <table>
+          <tr>
+            <th>STT</th>
+            <th>Tên file</th>
+            <th>Ngày tải lên</th>
+            <th>Hành động</th>
+          </tr>
+      `;
+            dataFiles.forEach((item, index) => {
+                table += `
+          <tr>
+            <td>${index + 1}</td>
+            <td>${item.name}</td>
+            <td>${item.date}</td>
+            <td><button class="delete-btn" onclick="removeFile(${index})">Xóa</button></td>
+          </tr>
+        `;
+            });
+            table += "</table>";
+            fileList.innerHTML = table;
+        }
+
+        function removeFile(index) {
+            const user = localStorage.getItem("currentUser");
+            dataFiles.splice(index, 1);
+            localStorage.setItem("files_" + user, JSON.stringify(dataFiles));
+            renderFiles();
+        }
+
+        function logout() {
+            localStorage.removeItem("currentUser");
+            authContainer.classList.remove("hidden");
+            infoContainer.classList.add("hidden");
+            studyContainer.classList.add("hidden");
+        }
+
+        // Nếu đã đăng nhập trước đó
+        const currentUser = localStorage.getItem("currentUser");
+        if (currentUser) showStudyApp(currentUser);
+    </script>
+</body>
+
+</html>
